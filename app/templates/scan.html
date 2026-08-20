@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block public_content %}
+<section class="print-experience">
+  <div class="hero-copy">
+    <div class="live-pill"><span></span> Local print service</div>
+    <h1>Print from your phone.<br><em>No cable. No app.</em></h1>
+    <p>{{ cfg.brand_tagline or 'Upload your file, choose the print settings and send it securely to the host printer.' }}</p>
+    <div class="trust-row"><span>☁ Drive-first</span><span>▣ Admin printer</span><span>✓ Secure approval</span></div>
+  </div>
+  <div class="printer-stage" aria-hidden="true">
+    <div class="stage-glow"></div><div class="paper-sheet"><span></span><span></span><span></span></div><div class="printer-3d"><div class="printer-top"></div><div class="printer-face"><i></i><b></b></div><div class="printer-tray"></div></div><div class="float-chip chip-a">PDF</div><div class="float-chip chip-b">A4</div><div class="float-chip chip-c">✓</div>
+  </div>
+</section>
+
+<section class="public-card print-card">
+  <div class="flow-head"><div><span class="section-kicker">CREATE PRINT JOB</span><h2>Your document</h2></div><div class="step-dots"><span class="active">1</span><i></i><span>2</span><i></i><span>3</span></div></div>
+  {% if not printer_ready %}<div class="inline-notice bad"><strong>Printer unavailable</strong><span>{{ printer_status.message }}</span></div>{% endif %}
+  {% if not drive.ok %}<div class="inline-notice bad"><strong>Google Drive unavailable</strong><span>{{ drive.message }}</span></div>{% endif %}
+  <form method="post" action="/submit" enctype="multipart/form-data" id="printForm">
+    <label class="drop-pro" id="dropZone"><input id="documentInput" type="file" name="document" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" required><span class="upload-symbol">⇧</span><strong id="fileTitle">Drop a PDF or image here</strong><span id="fileHelp">or tap to browse • max {{ cfg.max_upload_mb }} MB</span></label>
+    <div class="option-grid">
+      <div class="option-field"><label>Copies</label><div class="stepper"><button type="button" onclick="stepCopies(-1)">−</button><input id="copies" type="number" min="1" max="{{ cfg.max_copies }}" value="1" name="copies" required><button type="button" onclick="stepCopies(1)">+</button></div></div>
+      <div class="option-field"><label>Pages</label><input name="page_range" placeholder="All pages or 1-5,8"></div>
+      <div class="option-field"><label>Colour</label><select id="colorMode" name="color_mode"><option value="bw">Black & white</option><option value="color">Colour</option></select></div>
+      <div class="option-field"><label>Paper</label><select id="paperSize" name="paper_size"><option>A4</option><option>A3</option></select></div>
+      <div class="option-field"><label>Sides</label><select name="duplex"><option value="simplex">Single-sided</option><option value="duplex">Double-sided</option></select></div>
+      <div class="option-field"><label>Orientation</label><select name="orientation"><option value="auto">Automatic</option><option value="portrait">Portrait</option><option value="landscape">Landscape</option></select></div>
+    </div>
+    <div class="checkout-bar"><div><span>Current rate</span><strong id="rateText">₹{{ cfg.bw_a4_rate }}/page</strong></div><div class="checkout-note">Final total is calculated after the document is read.</div><button class="primary proceed" {% if not printer_ready or not drive.ok %}disabled{% endif %}>Continue <span>→</span></button></div>
+  </form>
+</section>
+<p class="privacy-note">Your print document is stored in Google Drive. The host PC uses only a temporary copy while printing.</p>
+<script>
+const rates={bw_A4:{{ cfg.bw_a4_rate|float }},color_A4:{{ cfg.color_a4_rate|float }},bw_A3:{{ cfg.bw_a3_rate|float }},color_A3:{{ cfg.color_a3_rate|float }}};
+function updateRate(){const k=document.getElementById('colorMode').value+'_'+document.getElementById('paperSize').value;document.getElementById('rateText').textContent='₹'+Number(rates[k]||0).toFixed(2)+'/page'}
+function stepCopies(delta){const el=document.getElementById('copies');el.value=Math.min(Number(el.max),Math.max(1,Number(el.value||1)+delta))}
+const input=document.getElementById('documentInput'),drop=document.getElementById('dropZone');input.addEventListener('change',()=>{if(input.files[0]){document.getElementById('fileTitle').textContent=input.files[0].name;document.getElementById('fileHelp').textContent=(input.files[0].size/1024/1024).toFixed(2)+' MB • ready to upload';drop.classList.add('has-file')}});['dragenter','dragover'].forEach(e=>drop.addEventListener(e,x=>{x.preventDefault();drop.classList.add('dragging')}));['dragleave','drop'].forEach(e=>drop.addEventListener(e,x=>{x.preventDefault();drop.classList.remove('dragging')}));drop.addEventListener('drop',e=>{if(e.dataTransfer.files.length){input.files=e.dataTransfer.files;input.dispatchEvent(new Event('change'))}});document.getElementById('colorMode').addEventListener('change',updateRate);document.getElementById('paperSize').addEventListener('change',updateRate);
+</script>
+{% endblock %}
