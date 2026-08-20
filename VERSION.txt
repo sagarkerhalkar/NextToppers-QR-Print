@@ -1,0 +1,4 @@
+NextToppers QR Print
+Version: 1.5.0
+Build: global-ui-ci
+Date: 2026-08-20
