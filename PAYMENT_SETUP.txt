@@ -1,0 +1,20 @@
+PAYMENT MODES
+
+A) YOUR EXISTING UPI / PAYMENT QR
+- Admin -> Payment -> Upload / Replace QR.
+- Customer sees the QR after submitting a print job.
+- Customer pays and clicks "I have paid".
+- IMPORTANT: a normal/static QR image cannot report bank payment success to this application.
+- Host must verify receipt and click Approve & Print.
+
+B) RAZORPAY AUTO PAYMENT + AUTO PRINT
+- Admin -> Payment.
+- Enter Razorpay Key ID + Key Secret.
+- Enable Razorpay and choose "Razorpay automatic payment OR host approval".
+- Every payment creates a Razorpay Order on the server.
+- Browser success is signature-verified on the server.
+- The server then calls Razorpay to confirm/capture the payment.
+- Only a CAPTURED payment is marked paid and sent automatically to the admin-selected printer.
+- For reliable webhooks in production, expose the webhook endpoint through a trusted public HTTPS URL.
+
+Never put Key Secret in browser code or share it with customers.
