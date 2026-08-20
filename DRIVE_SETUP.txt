@@ -1,0 +1,30 @@
+GOOGLE DRIVE - SIMPLE OAUTH SETUP
+
+If you already connected Google OAuth and only see:
+"Google Drive API has not been used in project ..."
+then DO NOT create OAuth again.
+
+Just do this:
+1. Start the app and login as Admin.
+2. Open Printer & Drive.
+3. Wait for the Drive check.
+4. Click "Enable Google Drive API" if the app shows it.
+5. Google Cloud opens the Drive API page for the OAuth project.
+6. Click ENABLE.
+7. Wait about 1 minute.
+8. Return to the printer app and click "Recheck Drive".
+9. It should show Google Drive connected.
+
+FIRST-TIME OAUTH ONLY:
+1. Enable Google Drive API in the same Google Cloud project.
+2. Google Auth Platform -> Clients -> Create OAuth Client ID -> Desktop app.
+3. Download the JSON.
+4. Printer app -> Printer & Drive -> Load OAuth JSON.
+5. Click Connect Google Drive ON THE HOST PC.
+6. Sign in with the Google account that owns/can edit the Printer folder.
+7. Allow access.
+
+Configured Printer folder ID:
+1UyFQCt6gBZ9wkeNWPGWmkL4jJj0Kugdu
+
+No service-account.json is needed.
