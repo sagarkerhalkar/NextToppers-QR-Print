@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="page-head dashboard-head"><div><p class="eyebrow">LIVE OPERATIONS</p><h1>Print dashboard</h1><p class="muted">A compact view of approvals, payments and completed print jobs.</p></div><div class="head-actions"><span class="status-pill {{ 'ok' if print_engine != 'Not installed' else 'bad' }}"><span class="dot"></span>{{ 'Print engine ready' if print_engine != 'Not installed' else 'Print engine missing' }}</span></div></section>
+
+<section class="metrics compact-metrics">
+  <div class="metric"><span class="metric-icon">▦</span><div><div class="label">Jobs</div><div class="value">{{ summary.jobs }}</div></div></div>
+  <div class="metric"><span class="metric-icon">▤</span><div><div class="label">Pages</div><div class="value">{{ summary.pages }}</div></div></div>
+  <div class="metric {{ 'attention' if summary.waiting else '' }}"><span class="metric-icon">◷</span><div><div class="label">Waiting</div><div class="value">{{ summary.waiting or 0 }}</div></div></div>
+  <div class="metric"><span class="metric-icon">₹</span><div><div class="label">Printed value</div><div class="value">₹{{ '%.0f'|format(summary.printed_amount or 0) }}</div></div></div>
+</section>
+
+<section class="dashboard-strip">
+  <div id="driveBanner" class="system-chip {{ 'ok' if drive.ok else 'warn' }}"><span class="system-icon">☁</span><div><strong id="driveTitle">{{ 'Drive ready' if drive.ok else 'Drive attention' }}</strong><span id="driveMessage">{{ drive.message }}</span><span id="driveAction"></span></div></div>
+  <div class="system-chip {{ 'ok' if cfg.default_printer else 'warn' }}"><span class="system-icon">▣</span><div><strong>{{ cfg.default_printer or 'No printer selected' }}</strong><span>{{ 'Admin-selected host printer' if cfg.default_printer else 'Choose a printer in Printer & Drive' }}</span></div></div>
+  <div class="qr-inline"><img src="/qr" alt="Customer QR"><div><strong>Customer QR</strong><span class="truncate">{{ qr_target }}</span></div><div class="qr-actions"><a href="/qr/download" title="Download QR">⇩</a><button type="button" onclick="copyPrintLink()" title="Copy link">⧉</button><button type="button" onclick="sharePrintLink()" title="Share">↗</button><a target="_blank" href="{{ qr_target }}" title="Open">→</a></div></div>
+</section>
+<input id="shareLinkInput" value="{{ qr_target }}" readonly hidden>
+<div id="shareToast" class="toast" role="status" aria-live="polite"></div>
+
+<section class="panel queue-panel">
+  <div class="panel-head queue-head"><div><h2>Recent print jobs</h2><p class="muted tiny">{{ total_filtered }} result(s) • 10 per page</p></div><form class="queue-filter" method="get" action="/admin"><input name="q" value="{{ search_q }}" placeholder="Search file or payment"><select name="status"><option value="">All statuses</option>{% for s in ['WAITING_APPROVAL','PRINTING','PRINTED','FAILED','REJECTED'] %}<option value="{{ s }}" {% if status_filter==s %}selected{% endif %}>{{ s.replace('_',' ')|title }}</option>{% endfor %}</select><button class="secondary small">Filter</button>{% if search_q or status_filter %}<a class="text-button" href="/admin">Clear</a>{% endif %}</form></div>
+  <div class="table-scroll">
+    <table class="jobs-table">
+      <thead><tr><th>Job</th><th>Print</th><th>Amount / Payment</th><th>Drive</th><th>Status</th><th class="action-col">Action</th></tr></thead>
+      <tbody>
+      {% for job in jobs %}
+      <tr class="job-row {{ 'priority' if job.status=='WAITING_APPROVAL' else '' }}">
+        <td data-label="Job"><div class="job-name"><span class="job-id">#{{ job.id }}</span><div><strong title="{{ job.original_name }}">{{ job.original_name }}</strong><span>{{ job.submitted_at[:16].replace('T',' ') }}</span></div></div></td>
+        <td data-label="Print"><strong>{{ job.requested_pages }} × {{ job.copies }}</strong><span class="cell-sub">{{ 'Colour' if job.color_mode=='color' else 'B/W' }} · {{ job.paper_size }} · {{ '2-sided' if job.duplex=='duplex' else '1-sided' }}</span></td>
+        <td data-label="Amount / Payment"><strong>₹{{ '%.2f'|format(job.amount) }}</strong><span class="cell-sub truncate" title="{{ job.payment_status }}">{{ job.payment_status }}</span></td>
+        <td data-label="Drive"><span class="storage-state {{ 'ok' if 'Upload' in job.drive_status else '' }}">{{ job.drive_status }}</span></td>
+        <td data-label="Status"><span class="badge {{ job.status|lower }}">{{ job.status.replace('_',' ') }}</span>{% if job.error %}<span class="cell-error" title="{{ job.error }}">{{ job.error }}</span>{% endif %}</td>
+        <td data-label="Action" class="row-actions">
+          <a class="icon-action" target="_blank" href="/job/{{ job.token }}/preview" title="Preview">◉</a>{% if job.drive_web_url %}<a class="icon-action" target="_blank" href="{{ job.drive_web_url }}" title="Open Drive">☁</a>{% endif %}
+          {% if job.status not in ['PRINTED','REJECTED'] %}
+          <details class="action-menu"><summary>Manage</summary><div class="action-popover"><form method="post" action="/admin/job/{{ job.id }}/approve"><label>Approval / payment</label><select name="payment_method"><option>Manual approval</option><option>UPI received manually</option><option>Cash received</option><option>Free / Staff</option></select><button class="primary big">Approve & Print</button></form><div class="popover-row"><form method="post" action="/admin/job/{{ job.id }}/retry"><button class="secondary small">Retry</button></form><form method="post" action="/admin/job/{{ job.id }}/reject"><button class="danger small">Reject</button></form></div></div></details>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}<tr><td colspan="6"><div class="empty-state"><span>▦</span><strong>No print requests</strong><p>Scan the customer QR to create the first job.</p></div></td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if total_pages > 1 %}<nav class="pagination"><a class="secondary button small {% if page_num<=1 %}disabled-link{% endif %}" href="/admin?page={{ page_num-1 }}&status={{ status_filter }}&q={{ search_q_url }}">← Previous</a><span>Page <strong>{{ page_num }}</strong> / {{ total_pages }}</span><a class="secondary button small {% if page_num>=total_pages %}disabled-link{% endif %}" href="/admin?page={{ page_num+1 }}&status={{ status_filter }}&q={{ search_q_url }}">Next →</a></nav>{% endif %}
+</section>
+<script>
+const printUrl={{ qr_target|tojson }};
+function toast(t){const el=document.getElementById('shareToast');el.textContent=t;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2200)}
+function fallbackCopy(){const el=document.getElementById('shareLinkInput');el.hidden=false;el.focus();el.select();let ok=false;try{ok=document.execCommand('copy')}catch(e){}el.hidden=true;if(!ok){window.prompt('Copy this print link:',printUrl);return false}return true}
+async function copyPrintLink(){let ok=false;try{if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(printUrl);ok=true}}catch(e){}if(!ok)ok=fallbackCopy();toast(ok?'Print link copied':'Copy the link shown')}
+async function sharePrintLink(){try{if(navigator.share){await navigator.share({title:'{{ cfg.shop_name }}',text:'Open the print page on the same local network',url:printUrl});return}}catch(e){}await copyPrintLink();toast('Share unavailable — link copied')}
+async function refreshDriveBadge(){try{const r=await fetch('/api/admin/drive/status?refresh=1',{cache:'no-store'});const d=await r.json();const box=document.getElementById('driveBanner');box.className='system-chip '+(d.ok?'ok':'warn');document.getElementById('driveTitle').textContent=d.ok?'Drive ready':'Drive attention';document.getElementById('driveMessage').textContent=d.message||'';const a=document.getElementById('driveAction');a.innerHTML='';if(d.action_url){const x=document.createElement('a');x.href=d.action_url;x.target='_blank';x.rel='noopener';x.textContent=' Enable API';a.appendChild(x)}}catch(e){}}
+{% if current_user.role == 'admin' %}setTimeout(refreshDriveBadge,250);{% endif %}
+</script>
+{% endblock %}
