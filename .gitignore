@@ -1,0 +1,28 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Runtime database and temporary state
+data/*.db
+data/*.db-*
+data/*.sqlite*
+data/*.key
+data/*.token
+
+# Secrets / credentials
+.env
+service-account.json
+client_secret*.json
+credentials*.json
+oauth*.json
+*.pem
+*.p12
+*.key
+
+# Local logs / archives
+*.log
+*.zip
+.DS_Store
+Thumbs.db
