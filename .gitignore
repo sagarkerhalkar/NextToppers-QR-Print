@@ -11,6 +11,9 @@ data/*.sqlite*
 data/*.key
 data/*.token
 
+# Runtime-generated stylesheet (source bundle is under app/runtime/)
+app/static/app.css
+
 # Secrets / credentials
 .env
 service-account.json
