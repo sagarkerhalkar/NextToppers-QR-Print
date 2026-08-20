@@ -1,0 +1,4 @@
+{% extends 'base.html' %}
+{% block public_content %}
+<div class="login-wrap"><section class="card login-card"><div class="login-mark">NT</div><p class="eyebrow">HOST CONSOLE</p><h1>Staff sign in</h1><p class="muted">Manage approvals, printers, Drive and payment settings.</p>{% if error %}<div class="alert">{{ error }}</div>{% endif %}<form method="post" action="/admin/login"><div><label>Username</label><input name="username" required autofocus autocomplete="username"></div><div><label>Password</label><input type="password" name="password" required autocomplete="current-password"></div><button class="primary big">Sign in</button></form></section></div>
+{% endblock %}
