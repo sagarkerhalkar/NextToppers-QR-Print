@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#081225">
+  <meta name="color-scheme" content="light">
+  <title>{{ title or (cfg.shop_name if cfg else 'NextToppers Print') }}</title>
+  <link rel="stylesheet" href="/static/app.css?v=150">
+</head>
+<body class="{{ 'admin-shell' if current_user else 'public-shell' }} {{ 'motion-on' if brand_animation else 'motion-off' }}" {% if brand_bg_src %}style="--brand-bg-image:url('{{ brand_bg_src }}')"{% endif %}>
+{% macro brand_visual(size='normal') -%}
+  {% if brand_logo_src %}<img class="brand-logo {{ size }}" src="{{ brand_logo_src }}" alt="{{ cfg.shop_name }} logo">{% else %}<div class="brand-mark {{ size }}">NT</div>{% endif %}
+{%- endmacro %}
+{% if current_user and not public_view %}
+  <aside class="sidebar" id="sidebar">
+    <div class="brand-lockup">{{ brand_visual('sidebar-logo') }}<div class="brand-copy"><strong>{{ cfg.shop_name }}</strong><span>PRINT OPERATIONS</span></div></div>
+    <nav class="side-nav" aria-label="Admin navigation">
+      <a href="/admin" class="{{ 'active' if request.url.path == '/admin' else '' }}"><span class="nav-icon">▦</span><span>Dashboard</span></a>
+      {% if current_user.role == 'admin' %}
+      <a href="/admin/settings" class="{{ 'active' if request.url.path.startswith('/admin/settings') else '' }}"><span class="nav-icon">⚙</span><span>Printer & Drive</span></a>
+      <a href="/admin/branding" class="{{ 'active' if request.url.path.startswith('/admin/branding') else '' }}"><span class="nav-icon">✦</span><span>Branding</span></a>
+      <a href="/admin/payment" class="{{ 'active' if request.url.path.startswith('/admin/payment') else '' }}"><span class="nav-icon">₹</span><span>Payments</span></a>
+      <a href="/admin/users" class="{{ 'active' if request.url.path.startswith('/admin/users') else '' }}"><span class="nav-icon">◎</span><span>Staff Users</span></a>
+      {% endif %}
+      <a href="/admin/password" class="{{ 'active' if request.url.path.startswith('/admin/password') else '' }}"><span class="nav-icon">◇</span><span>My Password</span></a>
+    </nav>
+    <div class="side-spacer"></div>
+    <div class="side-profile"><div class="avatar">{{ current_user.display_name[:1]|upper }}</div><div><strong>{{ current_user.display_name }}</strong><span>{{ current_user.role|title }}</span><a href="/admin/logout">Sign out</a></div></div>
+  </aside>
+  <div class="workspace">
+    <header class="admin-topbar">
+      <button type="button" class="mobile-menu" aria-label="Open menu" onclick="document.body.classList.toggle('nav-open')">☰</button>
+      <div class="context"><span class="context-dot"></span><div><strong>Host Console</strong><small>LAN connected • staff access</small></div></div>
+      <div class="top-actions"><a class="ghost-link" target="_blank" href="{{ auto_public_url if auto_public_url else '/' }}">Customer view ↗</a></div>
+    </header>
+    <main class="page">{% block content %}{% endblock %}</main>
+  </div>
+  <button class="nav-scrim" aria-label="Close menu" onclick="document.body.classList.remove('nav-open')"></button>
+{% else %}
+  <div class="ambient-scene" aria-hidden="true"><span class="orb orb-one"></span><span class="orb orb-two"></span><span class="orb orb-three"></span><span class="mesh"></span></div>
+  <header class="public-header"><div class="public-brand">{{ brand_visual('public-logo') }}<div><strong>{{ cfg.shop_name if cfg else 'NextToppers Print' }}</strong><span>{{ cfg.brand_tagline if cfg else 'Smart printing. Zero friction.' }}</span></div></div>{% if request.url.path != '/admin/login' %}<a class="public-admin-link" href="/admin/login">Staff</a>{% endif %}</header>
+  <main class="public-page">{% block public_content %}{% endblock %}</main>
+{% endif %}
+</body>
+</html>
