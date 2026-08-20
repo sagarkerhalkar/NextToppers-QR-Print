@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="page-head"><div><p class="eyebrow">BRAND SYSTEM</p><h1>Branding & experience</h1><p class="muted">Upload your logo and optional background. The customer page stays lightweight and responsive on phones, tablets and desktops.</p></div><a class="secondary button" target="_blank" href="/">Preview customer page ↗</a></section>
+{% if request.query_params.get('saved') %}<div class="successbox">Branding updated successfully.</div>{% endif %}
+<section class="brand-layout">
+  <form class="panel" method="post" action="/admin/branding" enctype="multipart/form-data">
+    <div class="panel-head"><div><h2>Identity</h2><p class="muted tiny">Images are optimized automatically before they are saved.</p></div></div>
+    <div class="panel-body form-grid">
+      <div class="full"><label>Brand / app name</label><input name="shop_name" value="{{ cfg.shop_name }}" required></div>
+      <div class="full"><label>Customer tagline</label><input name="brand_tagline" maxlength="140" value="{{ cfg.brand_tagline }}" placeholder="Smart printing. Zero friction."></div>
+      <div class="full"><label>Logo</label><div class="brand-upload"><div class="brand-preview logo-preview">{% if brand_logo_src %}<img src="{{ brand_logo_src }}" alt="Current logo">{% else %}<span>NT</span>{% endif %}</div><div><input type="file" name="logo" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"><p class="form-help">PNG/JPG/WebP • recommended square logo • max 6 MB</p>{% if brand_logo_src %}<label class="check-row"><input type="checkbox" name="remove_logo" value="1"><span>Remove current logo</span></label>{% endif %}</div></div></div>
+      <div class="full"><label>Hero background (optional)</label><div class="brand-upload"><div class="brand-preview bg-preview" {% if brand_bg_src %}style="background-image:url('{{ brand_bg_src }}')"{% endif %}></div><div><input type="file" name="background" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"><p class="form-help">Optional. The built-in animated 3D background works even without an image.</p>{% if brand_bg_src %}<label class="check-row"><input type="checkbox" name="remove_background" value="1"><span>Remove current background</span></label>{% endif %}</div></div></div>
+      <div class="full"><label class="toggle-row"><input type="checkbox" name="brand_animation" value="1" {% if brand_animation %}checked{% endif %}><span><strong>3D ambient animation</strong><small>Lightweight CSS motion. Automatically disabled for users who prefer reduced motion.</small></span></label></div>
+      <div class="full"><button class="primary big">Save branding</button></div>
+    </div>
+  </form>
+  <aside class="brand-demo {{ 'has-brand-bg' if brand_bg_src else '' }}" {% if brand_bg_src %}style="background-image:linear-gradient(135deg,rgba(5,14,32,.82),rgba(17,55,105,.62)),url('{{ brand_bg_src }}')"{% endif %}><div class="demo-orb a"></div><div class="demo-orb b"></div><div class="demo-content">{% if brand_logo_src %}<img src="{{ brand_logo_src }}" alt="Logo preview">{% else %}<span class="demo-logo">NT</span>{% endif %}<small>SELF-SERVICE PRINT</small><h2>{{ cfg.shop_name }}</h2><p>{{ cfg.brand_tagline or 'Smart printing. Zero friction.' }}</p><div class="demo-button">Upload document →</div></div></aside>
+</section>
+{% endblock %}
