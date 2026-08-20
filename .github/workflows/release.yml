@@ -1,0 +1,47 @@
+name: CD - Build Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    runs-on: windows-latest
+    env:
+      LAN_REQUIRED: '0'
+      PRINT_BACKEND: mock
+      APP_SECRET: github-actions-release-secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+      - name: Install and test
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+          python -m compileall -q app
+          pytest -q
+      - name: Build Windows source package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          $items = @('app','data','.env.example','.gitignore','DRIVE_SETUP.txt','PAYMENT_SETUP.txt','README.md','VERSION.txt','requirements.txt','detect_lan_ip.ps1','ensure_lan_firewall.ps1','ensure_print_engine.ps1','start_test_mode.bat','start_windows.bat')
+          Compress-Archive -Path $items -DestinationPath 'dist/NextToppers-QR-Print-Windows.zip' -Force
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NextToppers-QR-Print-Windows
+          path: dist/NextToppers-QR-Print-Windows.zip
+      - name: Publish GitHub Release for tag
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" 'dist/NextToppers-QR-Print-Windows.zip' --generate-notes --title "NextToppers QR Print ${{ github.ref_name }}"
