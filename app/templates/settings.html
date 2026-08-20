@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="page-head"><div><p class="eyebrow">ADMINISTRATION</p><h1>Printer & Drive</h1><p class="muted">One admin-selected printer for every customer. Drive documents are verified independently so this page loads fast.</p></div><span class="status-pill {{ 'ok' if sumatra!='Not installed' else 'bad' }}">{{ backend }} • {{ 'engine ready' if sumatra!='Not installed' else 'engine missing' }}</span></section>
+{% if request.query_params.get('saved') %}<div class="successbox">Printer and pricing settings saved.</div>{% endif %}
+{% if request.query_params.get('oauth_client') %}<div class="successbox">Google OAuth client loaded. Now connect Google Drive.</div>{% endif %}
+{% if request.query_params.get('drive_connected') %}<div class="successbox">Google sign-in completed. Drive will be checked below.</div>{% endif %}
+{% if request.query_params.get('drive_error') %}<div class="alert">Google Drive: {{ request.query_params.get('drive_error') }}</div>{% endif %}
+{% if request.query_params.get('msg') %}<div class="{{ 'successbox' if request.query_params.get('print_test')=='ok' else 'alert' }}">{{ request.query_params.get('msg') }}</div>{% endif %}
+
+<section class="section-grid">
+  <div class="stack">
+    <form class="panel" method="post" action="/admin/settings">
+      <div class="panel-head"><div><h2>Print routing</h2><p class="muted tiny">Customers never choose a printer.</p></div><button class="secondary small" type="button" onclick="loadPrinters(true)">Refresh printers</button></div>
+      <div class="panel-body form-grid">
+        <div class="full"><label>App name</label><input name="shop_name" value="{{ cfg.shop_name }}" required></div>
+        <div class="full"><label>Host printer</label><select id="printerSelect" name="default_printer" required><option value="{{ cfg.default_printer }}">{{ cfg.default_printer or 'Detecting Windows printers…' }}</option></select><div id="printerHint" class="form-help">Printer detection runs in the background so the page remains responsive.</div></div>
+        <div><label>A4 B/W ₹/page</label><input type="number" step="0.01" min="0" name="bw_a4_rate" value="{{ cfg.bw_a4_rate }}"></div><div><label>A4 Colour ₹/page</label><input type="number" step="0.01" min="0" name="color_a4_rate" value="{{ cfg.color_a4_rate }}"></div><div><label>A3 B/W ₹/page</label><input type="number" step="0.01" min="0" name="bw_a3_rate" value="{{ cfg.bw_a3_rate }}"></div><div><label>A3 Colour ₹/page</label><input type="number" step="0.01" min="0" name="color_a3_rate" value="{{ cfg.color_a3_rate }}"></div>
+        <div class="full"><label>LAN customer URL</label><input name="public_base_url" value="{{ cfg.public_base_url }}" placeholder="{{ lan_url }}"><div class="form-help">Leave blank to auto-detect the host PC LAN/VLAN IPv4.</div></div>
+        <div class="full"><label>Google Drive Printer folder ID</label><input name="drive_folder_id" value="{{ cfg.drive_folder_id }}" required></div>
+        <div class="full"><button class="primary big">Save settings</button></div>
+      </div>
+    </form>
+
+    <section class="panel"><div class="panel-head"><div><h2>Physical print test</h2><p class="muted tiny">Proves the Windows printer path before customer use.</p></div></div><div class="panel-body"><p class="muted tiny">Engine: <code>{{ sumatra }}</code></p><form class="field-row" method="post" action="/admin/printer/test"><div><label>Printer</label><select id="testPrinterSelect" name="printer_name" required><option value="{{ cfg.default_printer }}">{{ cfg.default_printer or 'Loading printers…' }}</option></select></div><button class="primary">Print 1 test page</button></form></div></section>
+  </div>
+
+  <div class="stack">
+    <section class="panel"><div class="panel-head"><div><h2>Google Drive</h2><p class="muted tiny">OAuth sign-in • no service-account key</p></div><button class="secondary small" type="button" onclick="checkDrive()">Recheck Drive</button></div><div class="panel-body">
+      <div id="driveStatus" class="info-box"><strong id="driveStatusTitle">Checking Drive…</strong><br><span id="driveStatusText">This check runs separately and does not block page loading.</span><div id="driveStatusAction" class="spacer-small"></div></div>
+      {% if drive.email %}<p class="tiny muted">Signed-in account: <code>{{ drive.email }}</code></p>{% endif %}
+      {% if cfg.google_oauth_project_id %}<p class="tiny muted">OAuth project: <code>{{ cfg.google_oauth_project_id }}</code></p>{% endif %}
+      <div class="divider"></div>
+      <form method="post" action="/admin/drive/oauth/client" enctype="multipart/form-data"><label>1. Google Desktop OAuth JSON</label><div class="file-drop"><input type="file" name="oauth_json" accept="application/json,.json" required></div><button class="secondary big spacer-small">Load OAuth JSON</button></form>
+      <a class="primary button big spacer-small" href="/admin/drive/connect">2. Connect Google Drive</a>
+      {% if drive.connected %}<form method="post" action="/admin/drive/disconnect" class="spacer-small"><button class="danger big">Disconnect Drive</button></form>{% endif %}
+      <p class="form-help">Run Connect Google Drive on the host PC. Google returns to 127.0.0.1 on that same computer, then the app returns you to the LAN console.</p>
+    </div></section>
+
+    <section class="panel"><div class="panel-head"><div><h2>Customer access</h2><p class="muted tiny">One QR and one LAN link</p></div></div><div class="panel-body"><div class="qr-card"><img src="/qr" alt="Customer QR"><div><strong>Scan to print</strong><input value="{{ lan_url }}/" readonly><div class="mini-actions"><a class="secondary button" href="/qr/download">Download QR</a><a class="soft button" target="_blank" href="{{ lan_url }}/">Open link</a></div></div></div></div></section>
+  </div>
+</section>
+<script>
+const savedPrinter={{ cfg.default_printer|tojson }};
+async function loadPrinters(force=false){const hint=document.getElementById('printerHint');hint.innerHTML='<span class="spin"></span> Detecting Windows printers…';try{const r=await fetch('/api/printers'+(force?'?refresh=1':''),{cache:'no-store'});const d=await r.json();if(!r.ok)throw new Error('Printer detection failed');for(const id of ['printerSelect','testPrinterSelect']){const sel=document.getElementById(id);sel.innerHTML='';if(!d.printers.length){const o=document.createElement('option');o.value='';o.textContent='No Windows printer detected';sel.appendChild(o);continue}for(const p of d.printers){const o=document.createElement('option');o.value=p;o.textContent=p;if(p===savedPrinter)o.selected=true;sel.appendChild(o)}}hint.textContent=d.printers.length?`${d.printers.length} Windows printer(s) detected.`:'No Windows printers detected. Check Windows Settings > Printers & scanners.'}catch(e){hint.textContent='Could not detect printers. Refresh after checking Windows Print Spooler.'}}
+async function checkDrive(){const box=document.getElementById('driveStatus'),title=document.getElementById('driveStatusTitle'),text=document.getElementById('driveStatusText'),action=document.getElementById('driveStatusAction');box.className='info-box';title.innerHTML='<span class="spin"></span> Checking Google Drive';text.textContent='Contacting Google…';action.innerHTML='';try{const r=await fetch('/api/admin/drive/status?refresh=1',{cache:'no-store'});const d=await r.json();box.className=d.ok?'successbox':(d.code==='drive_api_disabled'?'info-box warning-box':'alert');title.textContent=d.ok?'Google Drive connected':'Google Drive not ready';text.textContent=d.message||'';if(d.action_url){const a=document.createElement('a');a.href=d.action_url;a.target='_blank';a.rel='noopener';a.className='button primary spacer-small';a.textContent='Enable Google Drive API';action.appendChild(a);const p=document.createElement('p');p.className='form-help';p.textContent='After enabling it, wait about 1 minute and click Recheck Drive.';action.appendChild(p)}}catch(e){box.className='alert';title.textContent='Drive check failed';text.textContent='The app could not complete the Drive check.'}}
+setTimeout(()=>loadPrinters(false),40);setTimeout(checkDrive,80);
+</script>
+{% endblock %}
