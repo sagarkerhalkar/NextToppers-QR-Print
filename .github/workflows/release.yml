@@ -31,8 +31,11 @@ jobs:
       - name: Reconstruct V2.0 source
         shell: pwsh
         run: |
-          $parts = Get-ChildItem 'packages/v2.0.0/source14.tgz.b64.part*' | Sort-Object Name
-          if (-not $parts) { throw 'V2.0 source package parts not found' }
+          $names = 0..4 | ForEach-Object { 'packages/v2.0.0/source14.tgz.b64.part{0:D2}' -f $_ }
+          $parts = $names | ForEach-Object {
+            if (-not (Test-Path $_)) { throw "Missing V2.0 source chunk: $_" }
+            Get-Item $_
+          }
           $b64 = ($parts | ForEach-Object { Get-Content $_.FullName -Raw }) -join ''
           [IO.File]::WriteAllBytes('v2-source.tgz', [Convert]::FromBase64String($b64))
           New-Item -ItemType Directory -Force buildsrc | Out-Null
