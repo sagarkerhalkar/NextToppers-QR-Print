@@ -32,14 +32,21 @@ jobs:
         shell: pwsh
         run: |
           $names = 0..4 | ForEach-Object { 'packages/v2.0.0/source14.tgz.b64.part{0:D2}' -f $_ }
-          $parts = $names | ForEach-Object {
-            if (-not (Test-Path $_)) { throw "Missing V2.0 source chunk: $_" }
-            Get-Item $_
+          $out = [IO.File]::Open('v2-source.tgz', [IO.FileMode]::Create)
+          try {
+            foreach($name in $names) {
+              if (-not (Test-Path $name)) { throw "Missing V2.0 source chunk: $name" }
+              $text = (Get-Content $name -Raw).Trim()
+              $bytes = [Convert]::FromBase64String($text)
+              $out.Write($bytes, 0, $bytes.Length)
+              Write-Host "Decoded $name -> $($bytes.Length) bytes"
+            }
+          } finally {
+            $out.Dispose()
           }
-          $b64 = ($parts | ForEach-Object { Get-Content $_.FullName -Raw }) -join ''
-          [IO.File]::WriteAllBytes('v2-source.tgz', [Convert]::FromBase64String($b64))
           New-Item -ItemType Directory -Force buildsrc | Out-Null
           tar -xzf v2-source.tgz -C buildsrc
+          if ($LASTEXITCODE -ne 0) { throw 'V2.0 source archive extraction failed' }
           if (Test-Path 'buildsrc/build_windows.ps1') {
             $src = (Resolve-Path 'buildsrc').Path
           } else {
