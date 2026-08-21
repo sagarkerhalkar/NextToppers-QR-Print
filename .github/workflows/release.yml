@@ -36,7 +36,10 @@ jobs:
           try {
             foreach($name in $names) {
               if (-not (Test-Path $name)) { throw "Missing V2.0 source chunk: $name" }
-              $text = (Get-Content $name -Raw).Trim()
+              $text = Get-Content $name -Raw
+              $text = $text.Replace('\\r','').Replace('\\n','')
+              $text = [regex]::Replace($text, '[^A-Za-z0-9+/=]', '')
+              if (($text.Length % 4) -ne 0) { throw "Sanitized Base64 length invalid for $name : $($text.Length)" }
               $bytes = [Convert]::FromBase64String($text)
               $out.Write($bytes, 0, $bytes.Length)
               Write-Host "Decoded $name -> $($bytes.Length) bytes"
