@@ -37,8 +37,11 @@ jobs:
             foreach($name in $names) {
               if (-not (Test-Path $name)) { throw "Missing V2.0 source chunk: $name" }
               $text = Get-Content $name -Raw
-              $text = [regex]::Replace($text, '\\[rn]', '')
               $text = [regex]::Replace($text, '[^A-Za-z0-9+/=]', '')
+              if (($text.Length % 4) -eq 2 -and $text.EndsWith('rn')) {
+                Write-Host "Removing transport rn marker from $name"
+                $text = $text.Substring(0, $text.Length - 2)
+              }
               if (($text.Length % 4) -ne 0) { throw "Sanitized Base64 length invalid for $name : $($text.Length)" }
               $bytes = [Convert]::FromBase64String($text)
               $out.Write($bytes, 0, $bytes.Length)
